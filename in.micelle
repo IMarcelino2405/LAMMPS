@@ -1,0 +1,78 @@
+units real
+atom_style full
+
+# 2d micelle simulation
+
+dimension	3 #3 dimension
+
+neighbor	0.3 bin #kurang lebih sama kaya cutoff
+neigh_modify	delay 5 #satuan waktu yang menentukan lama nya interaksi sebelum berganti kondisi
+
+atom_style	bond #menggunakan atom style bond yang menunjukan bahwa ikatan ikut dihitung
+
+# Soft potential push-off
+
+read_data	data.micelle #membaca data yang berisikan data data
+special_bonds	fene #finite extensible nonlinear elastic 
+
+pair_style	soft 1.12246 #kemungkinan lj/cut 
+pair_coeff	* * 0.0 1.12246
+
+bond_style	harmonic
+bond_coeff	1 469.0000     1.4000 # C-C K - R0 (jarak ikatan antar atom dalam posisi optimum)
+bond_coeff	2 367.0000     1.0800 # C-H
+bond_coeff	3 320.0000     1.4100 # C-O
+bond_coeff	4 553.0000     0.9450 # H-O atoms 61-58 bonds 60
+		
+velocity	all create 0.45 2349852
+
+variable	prefactor equal ramp(1.0,20.0)
+
+fix		1 all nve
+fix		2 all temp/rescale 100 0.45 0.45 0.02 1.0
+fix		3 all adapt 1 pair soft a * * v_prefactor
+#fix		4 all enforce2d
+
+thermo		50
+run		1000
+
+unfix		3
+
+# Main run
+
+pair_style	lj/cut 2.5
+
+# solvent/head - full-size and long-range
+
+pair_coeff	1 1 1.0 1.0 2.5
+pair_coeff	2 2 1.0 1.0 2.5
+pair_coeff	1 2 1.0 1.0 2.5
+
+# tail/tail - size-averaged and long-range
+
+pair_coeff	3 3 1.0 0.75 2.5
+#pair_coeff	4 4 1.0 0.50 2.5 #-----------
+#pair_coeff	3 4 1.0 0.67 2.5 #-----------
+
+# solvent/tail - full-size and repulsive
+
+pair_coeff	1 3 1.0 1.0 1.12246
+#pair_coeff	1 4 1.0 1.0 1.12246 #---------
+
+# head/tail - size-averaged and repulsive
+
+pair_coeff	2 3 1.0 0.88 1.12246
+#pair_coeff	2 4 1.0 0.75 1.12246 #---------
+
+thermo		50
+
+dump		1 all atom 10 dump.xyz
+
+#dump		2 all image 2000 image.*.jpg type type zoom 1.6
+#dump_modify	2 pad 5 adiam 1 0.5 adiam 2 1.5 adiam 3 1.0 adiam 4 0.75
+
+#dump		3 all movie 2000 movie.mpg type type zoom 1.6
+#dump_modify	3 pad 5
+
+reset_timestep	0
+run		10000
